@@ -38,124 +38,119 @@
         }
     </style>
     
-    <!-- ✅ Correct Firebase SDK Integration (No Import Errors) -->
+    <!-- ✅ Correct Firebase SDK (No 'import' errors) -->
     <script src="https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js"></script>
 
     <script>
-        // ✅ Initialize Firebase properly before using 'db'
-        document.addEventListener("DOMContentLoaded", function () {
-            const firebaseConfig = {
-                apiKey: "AIzaSyCZTibUYEoubfrAh_fBZSBSIWJutxe4tmo",
-                authDomain: "comti-bf6cb.firebaseapp.com",
-                projectId: "comti-bf6cb",
-                storageBucket: "comti-bf6cb.appspot.com",
-                messagingSenderId: "332358005483",
-                appId: "1:332358005483:web:4140fa19070fb142fd84ae"
-            };
+        // ✅ Fix: Initialize Firebase before using 'db'
+        const firebaseConfig = {
+            apiKey: "AIzaSyCZTibUYEoubfrAh_fBZSBSIWJutxe4tmo",
+            authDomain: "comti-bf6cb.firebaseapp.com",
+            projectId: "comti-bf6cb",
+            storageBucket: "comti-bf6cb.appspot.com",
+            messagingSenderId: "332358005483",
+            appId: "1:332358005483:web:4140fa19070fb142fd84ae"
+        };
 
-            // ✅ Fix: Ensure Firebase initializes before using 'db'
-            firebase.initializeApp(firebaseConfig);
-            const db = firebase.firestore();
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
 
-            function getLuckyNumber() {
-                const userName = document.getElementById("userName").value.trim();
-                if (!userName) {
-                    alert("Please enter your name.");
+        function getLuckyNumber() {
+            const userName = document.getElementById("userName").value.trim();
+            if (!userName) {
+                alert("Please enter your name.");
+                return;
+            }
+
+            db.collection("luckyDraw").doc(userName).get().then((doc) => {
+                if (doc.exists) {
+                    alert(`You already have a number: ${doc.data().number}`);
                     return;
                 }
 
-                db.collection("luckyDraw").doc(userName).get().then((doc) => {
-                    if (doc.exists) {
-                        alert(`You already have a number: ${doc.data().number}`);
-                        return;
-                    }
-
-                    db.collection("luckyDraw").get().then((snapshot) => {
-                        const assignedNumbers = snapshot.docs.map(doc => doc.data().number);
-                        let availableNumbers = Array.from({ length: 15 }, (_, i) => i + 1).filter(n => !assignedNumbers.includes(n));
-
-                        if (availableNumbers.length === 0) {
-                            alert("All numbers have been assigned.");
-                            return;
-                        }
-
-                        const luckyNumber = availableNumbers[Math.floor(Math.random() * availableNumbers.length)];
-
-                        db.collection("luckyDraw").doc(userName).set({ name: userName, number: luckyNumber })
-                            .then(() => {
-                                alert(`Your lucky number is: ${luckyNumber}`);
-                                displayResults();
-                            })
-                            .catch(error => console.error("Firestore Write Error:", error));
-                    });
-                }).catch(error => console.error("Firestore Get Document Error:", error));
-            }
-
-            function resetLuckyDraw() {
-                const adminPassword = prompt("Enter admin password to reset:");
-                if (adminPassword === "1217") {
-                    db.collection("luckyDraw").get().then((snapshot) => {
-                        snapshot.docs.forEach((doc) => doc.ref.delete());
-                        displayResults();
-                        alert("Lucky draw has been reset.");
-                    }).catch(error => console.error("Error resetting draw:", error));
-                } else {
-                    alert("Incorrect password. Reset denied.");
-                }
-            }
-
-            function deleteEntry() {
-                const adminPassword = prompt("Enter admin password to delete an entry:");
-                if (adminPassword === "1217") {
-                    const participantNumber = parseInt(prompt("Enter the participant number to delete:"));
-                    db.collection("luckyDraw").get().then((snapshot) => {
-                        let users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        if (participantNumber > 0 && participantNumber <= users.length) {
-                            let userToDelete = users[participantNumber - 1];
-                            db.collection("luckyDraw").doc(userToDelete.id).delete().then(() => {
-                                alert(`Entry for ${userToDelete.name} has been deleted.`);
-                                displayResults();
-                            }).catch(error => console.error("Error deleting document:", error));
-                        } else {
-                            alert("Invalid participant number.");
-                        }
-                    }).catch(error => console.error("Error fetching entries:", error));
-                } else {
-                    alert("Incorrect password. Deletion denied.");
-                }
-            }
-
-            function displayResults() {
                 db.collection("luckyDraw").get().then((snapshot) => {
-                    const resultDiv = document.getElementById("result");
-                    resultDiv.innerHTML = "<h3>Previous Submissions:</h3>";
+                    const assignedNumbers = snapshot.docs.map(doc => doc.data().number);
+                    let availableNumbers = Array.from({ length: 15 }, (_, i) => i + 1).filter(n => !assignedNumbers.includes(n));
 
-                    if (snapshot.empty) {
-                        console.log("No Firestore data found.");
-                        resultDiv.innerHTML += "<p>No entries yet.</p>";
+                    if (availableNumbers.length === 0) {
+                        alert("All numbers have been assigned.");
                         return;
                     }
 
-                    let table = `<table><tr><th>Participant Number</th><th>Name</th><th>Committee Number Assigned</th></tr>`;
-                    let index = 1;
-                    snapshot.docs.forEach((doc) => {
-                        const data = doc.data();
-                        table += `<tr><td>${index}</td><td>${data.name}</td><td>${data.number}</td></tr>`;
-                        index++;
-                    });
-                    table += "</table>";
-                    resultDiv.innerHTML += table;
-                }).catch(error => console.error("Error displaying results:", error));
+                    const luckyNumber = availableNumbers[Math.floor(Math.random() * availableNumbers.length)];
+
+                    db.collection("luckyDraw").doc(userName).set({ name: userName, number: luckyNumber })
+                        .then(() => {
+                            alert(`Your lucky number is: ${luckyNumber}`);
+                            displayResults();
+                        })
+                        .catch(error => console.error("Firestore Write Error:", error));
+                });
+            }).catch(error => console.error("Firestore Get Document Error:", error));
+        }
+
+        function resetLuckyDraw() {
+            const adminPassword = prompt("Enter admin password to reset:");
+            if (adminPassword === "1217") {
+                db.collection("luckyDraw").get().then((snapshot) => {
+                    snapshot.docs.forEach((doc) => doc.ref.delete());
+                    displayResults();
+                    alert("Lucky draw has been reset.");
+                }).catch(error => console.error("Error resetting draw:", error));
+            } else {
+                alert("Incorrect password. Reset denied.");
             }
+        }
 
-            window.onload = displayResults;
+        function deleteEntry() {
+            const adminPassword = prompt("Enter admin password to delete an entry:");
+            if (adminPassword === "1217") {
+                const participantNumber = parseInt(prompt("Enter the participant number to delete:"));
+                db.collection("luckyDraw").get().then((snapshot) => {
+                    let users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    if (participantNumber > 0 && participantNumber <= users.length) {
+                        let userToDelete = users[participantNumber - 1];
+                        db.collection("luckyDraw").doc(userToDelete.id).delete().then(() => {
+                            alert(`Entry for ${userToDelete.name} has been deleted.`);
+                            displayResults();
+                        }).catch(error => console.error("Error deleting document:", error));
+                    } else {
+                        alert("Invalid participant number.");
+                    }
+                }).catch(error => console.error("Error fetching entries:", error));
+            } else {
+                alert("Incorrect password. Deletion denied.");
+            }
+        }
 
-            // ✅ Fix: Attach functions globally
-            window.getLuckyNumber = getLuckyNumber;
-            window.resetLuckyDraw = resetLuckyDraw;
-            window.deleteEntry = deleteEntry;
-        });
+        function displayResults() {
+            db.collection("luckyDraw").get().then((snapshot) => {
+                const resultDiv = document.getElementById("result");
+                resultDiv.innerHTML = "<h3>Previous Submissions:</h3>";
+
+                if (snapshot.empty) {
+                    console.log("No Firestore data found.");
+                    resultDiv.innerHTML += "<p>No entries yet.</p>";
+                    return;
+                }
+
+                let table = `<table><tr><th>Participant Number</th><th>Name</th><th>Committee Number Assigned</th></tr>`;
+                let index = 1;
+                snapshot.docs.forEach((doc) => {
+                    const data = doc.data();
+                    table += `<tr><td>${index}</td><td>${data.name}</td><td>${data.number}</td></tr>`;
+                    index++;
+                });
+                table += "</table>";
+                resultDiv.innerHTML += table;
+            }).catch(error => console.error("Error displaying results:", error));
+        }
+
+        // ✅ Fix: Attach functions globally so they can be accessed by buttons
+        window.getLuckyNumber = getLuckyNumber;
+        window.resetLuckyDraw = resetLuckyDraw;
+        window.deleteEntry = deleteEntry;
     </script>
 </head>
 <body>
