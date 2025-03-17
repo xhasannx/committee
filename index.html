@@ -37,90 +37,6 @@
             width: 33%;
         }
     </style>
-    
-<script src="https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js"></script>
-
-
- <script>
-    // ✅ Ensure Firebase initializes before using it
-    document.addEventListener("DOMContentLoaded", function () {
-        // ✅ Initialize Firebase
-        const firebaseConfig = {
-            apiKey: "AIzaSyCZTibUYEoubfrAh_fBZSBSIWJutxe4tmo",
-            authDomain: "comti-bf6cb.firebaseapp.com",
-            projectId: "comti-bf6cb",
-            storageBucket: "comti-bf6cb.appspot.com",
-            messagingSenderId: "332358005483",
-            appId: "1:332358005483:web:4140fa19070fb142fd84ae"
-        };
-
-        firebase.initializeApp(firebaseConfig);
-        window.db = firebase.firestore();  // ✅ Fix: Ensure 'db' is globally accessible
-
-        // ✅ Attach functions globally so buttons can call them
-        window.getLuckyNumber = function () {
-            const userName = document.getElementById("userName").value.trim();
-            if (!userName) {
-                alert("Please enter your name.");
-                return;
-            }
-
-            db.collection("luckyDraw").doc(userName).get().then((doc) => {
-                if (doc.exists) {
-                    alert(`You already have a number: ${doc.data().number}`);
-                    return;
-                }
-
-                db.collection("luckyDraw").get().then((snapshot) => {
-                    const assignedNumbers = snapshot.docs.map(doc => doc.data().number);
-                    let availableNumbers = Array.from({ length: 15 }, (_, i) => i + 1).filter(n => !assignedNumbers.includes(n));
-
-                    if (availableNumbers.length === 0) {
-                        alert("All numbers have been assigned.");
-                        return;
-                    }
-
-                    const luckyNumber = availableNumbers[Math.floor(Math.random() * availableNumbers.length)];
-
-                    db.collection("luckyDraw").doc(userName).set({ name: userName, number: luckyNumber })
-                        .then(() => {
-                            alert(`Your lucky number is: ${luckyNumber}`);
-                            displayResults();
-                        })
-                        .catch(error => console.error("Firestore Write Error:", error));
-                });
-            }).catch(error => console.error("Firestore Get Document Error:", error));
-        };
-
-        window.displayResults = function () {
-            db.collection("luckyDraw").get().then((snapshot) => {
-                const resultDiv = document.getElementById("result");
-                resultDiv.innerHTML = "<h3>Previous Submissions:</h3>";
-
-                if (snapshot.empty) {
-                    console.log("No Firestore data found.");
-                    resultDiv.innerHTML += "<p>No entries yet.</p>";
-                    return;
-                }
-
-                let table = `<table><tr><th>Participant Number</th><th>Name</th><th>Committee Number Assigned</th></tr>`;
-                let index = 1;
-                snapshot.docs.forEach((doc) => {
-                    const data = doc.data();
-                    table += `<tr><td>${index}</td><td>${data.name}</td><td>${data.number}</td></tr>`;
-                    index++;
-                });
-                table += "</table>";
-                resultDiv.innerHTML += table;
-            }).catch(error => console.error("Error displaying results:", error));
-        };
-
-        // ✅ Load results on page load
-        window.onload = displayResults;
-    });
-</script>
-
 </head>
 <body>
     <h2>Draw for Committee 2025-2026</h2>
@@ -129,5 +45,63 @@
     <button onclick="resetLuckyDraw()">Admin Reset</button>
     <button onclick="deleteEntry()">Delete Entry</button>
     <div id="result"></div>
+
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbymMx6av6n8X8bE7Vei2CfFnszbl1DGlQ7lMkeCphUSfbbuwNwYorzxFBmyAQoQzi8L/exec"; // Replace with your Apps Script URL
+
+        function getLuckyNumber() {
+            const userName = document.getElementById("userName").value.trim();
+            if (!userName) {
+                alert("Please enter your name.");
+                return;
+            }
+
+            fetch(API_URL)
+                .then(response => response.json())
+                .then(data => {
+                    let existingEntry = data.find(row => row[0] === userName);
+                    if (existingEntry) {
+                        alert(`You already have a number: ${existingEntry[1]}`);
+                        return;
+                    }
+
+                    let assignedNumbers = data.map(row => parseInt(row[1]));
+                    let availableNumbers = Array.from({ length: 15 }, (_, i) => i + 1).filter(n => !assignedNumbers.includes(n));
+
+                    if (availableNumbers.length === 0) {
+                        alert("All numbers have been assigned.");
+                        return;
+                    }
+
+                    let luckyNumber = availableNumbers[Math.floor(Math.random() * availableNumbers.length)];
+
+                    fetch(API_URL, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ name: userName, number: luckyNumber })
+                    }).then(() => {
+                        alert(`Your lucky number is: ${luckyNumber}`);
+                        displayResults();
+                    });
+                });
+        }
+
+        function displayResults() {
+            fetch(API_URL)
+                .then(response => response.json())
+                .then(data => {
+                    const resultDiv = document.getElementById("result");
+                    resultDiv.innerHTML = "<h3>Previous Submissions:</h3>";
+                    let table = `<table><tr><th>Participant Number</th><th>Name</th><th>Committee Number Assigned</th></tr>`;
+                    data.forEach((row, index) => {
+                        table += `<tr><td>${index + 1}</td><td>${row[0]}</td><td>${row[1]}</td></tr>`;
+                    });
+                    table += "</table>";
+                    resultDiv.innerHTML += table;
+                });
+        }
+
+        window.onload = displayResults;
+    </script>
 </body>
 </html>
