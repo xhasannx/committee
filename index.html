@@ -39,13 +39,11 @@
     </style>
     
     <!-- Firebase SDK -->
-    <script type="module">
-        // Import the functions you need from the SDKs you need
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
-        // TODO: Add SDKs for Firebase products that you want to use
-        // https://firebase.google.com/docs/web/setup#available-libraries
-    
-        // Your web app's Firebase configuration
+    <script src="https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js"></script>
+
+    <script>
+        // Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyCZTibUYEoubfrAh_fBZSBSIWJutxe4tmo",
             authDomain: "comti-bf6cb.firebaseapp.com",
@@ -54,9 +52,90 @@
             messagingSenderId: "332358005483",
             appId: "1:332358005483:web:4140fa19070fb142fd84ae"
         };
-    
+
         // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        function getLuckyNumber() {
+            const userName = document.getElementById("userName").value.trim();
+            if (!userName) {
+                alert("Please enter your name.");
+                return;
+            }
+
+            db.collection("luckyDraw").doc(userName).get().then((doc) => {
+                if (doc.exists) {
+                    alert("You already have a number: " + doc.data().number);
+                    return;
+                }
+
+                db.collection("luckyDraw").get().then((snapshot) => {
+                    const assignedNumbers = snapshot.docs.map(doc => doc.data().number);
+                    let availableNumbers = Array.from({ length: 15 }, (_, i) => i + 1).filter(n => !assignedNumbers.includes(n));
+
+                    if (availableNumbers.length === 0) {
+                        alert("All numbers have been assigned.");
+                        return;
+                    }
+
+                    const luckyNumber = availableNumbers[Math.floor(Math.random() * availableNumbers.length)];
+                    db.collection("luckyDraw").doc(userName).set({ name: userName, number: luckyNumber });
+                    displayResults();
+                });
+            });
+        }
+
+        function resetLuckyDraw() {
+            const adminPassword = prompt("Enter admin password to reset:");
+            if (adminPassword === "1217") {
+                db.collection("luckyDraw").get().then((snapshot) => {
+                    snapshot.docs.forEach((doc) => doc.ref.delete());
+                    displayResults();
+                    alert("Lucky draw has been reset.");
+                });
+            } else {
+                alert("Incorrect password. Reset denied.");
+            }
+        }
+
+        function deleteEntry() {
+            const adminPassword = prompt("Enter admin password to delete an entry:");
+            if (adminPassword === "1217") {
+                const participantNumber = parseInt(prompt("Enter the participant number to delete:"));
+                db.collection("luckyDraw").get().then((snapshot) => {
+                    let users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    if (participantNumber > 0 && participantNumber <= users.length) {
+                        let userToDelete = users[participantNumber - 1];
+                        db.collection("luckyDraw").doc(userToDelete.id).delete();
+                        alert(`Entry for ${userToDelete.name} has been deleted.`);
+                        displayResults();
+                    } else {
+                        alert("Invalid participant number.");
+                    }
+                });
+            } else {
+                alert("Incorrect password. Deletion denied.");
+            }
+        }
+
+        function displayResults() {
+            db.collection("luckyDraw").get().then((snapshot) => {
+                const resultDiv = document.getElementById("result");
+                resultDiv.innerHTML = "<h3>Previous Submissions:</h3>";
+                let table = `<table><tr><th>Participant Number</th><th>Name</th><th>Committee Number Assigned</th></tr>`;
+                let index = 1;
+                snapshot.docs.forEach((doc) => {
+                    const data = doc.data();
+                    table += `<tr><td>${index}</td><td>${data.name}</td><td>${data.number}</td></tr>`;
+                    index++;
+                });
+                table += "</table>";
+                resultDiv.innerHTML += table;
+            });
+        }
+
+        window.onload = displayResults;
     </script>
     
 </head>
