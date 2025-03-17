@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Draw for Committee 2025-2026</title>
+    <style>
+        body {
+            background-color: lightgrey;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 50px;
+        }
+        h2 {
+            font-size: 32px;
+        }
+        input, button {
+            font-size: 20px;
+            padding: 10px;
+            margin: 10px;
+        }
+        #result {
+            margin-top: 30px;
+            font-size: 22px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        table {
+            border-collapse: collapse;
+            width: 50%;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: center;
+            width: 33%;
+        }
+    </style>
+    <script>
+        let availableNumbers = Array.from({ length: 15 }, (_, i) => i + 1);
+        let assignedNumbers = JSON.parse(localStorage.getItem("assignedNumbers")) || {};
+        
+        function getLuckyNumber() {
+            const userName = document.getElementById("userName").value.trim();
+            if (!userName) {
+                alert("Please enter your name.");
+                return;
+            }
+            
+            if (assignedNumbers[userName]) {
+                alert("You already have a number: " + assignedNumbers[userName]);
+                return;
+            }
+            
+            if (availableNumbers.length === 0) {
+                alert("All numbers have been assigned.");
+                return;
+            }
+            
+            const randomIndex = Math.floor(Math.random() * availableNumbers.length);
+            const luckyNumber = availableNumbers.splice(randomIndex, 1)[0];
+            assignedNumbers[userName] = luckyNumber;
+            localStorage.setItem("assignedNumbers", JSON.stringify(assignedNumbers));
+            displayResults();
+        }
+        
+        function resetLuckyDraw() {
+            const adminPassword = prompt("Enter admin password to reset:");
+            if (adminPassword === "1217") {
+                availableNumbers = Array.from({ length: 15 }, (_, i) => i + 1);
+                assignedNumbers = {};
+                localStorage.setItem("assignedNumbers", JSON.stringify(assignedNumbers));
+                displayResults();
+                alert("Lucky draw has been reset.");
+            } else {
+                alert("Incorrect password. Reset denied.");
+            }
+        }
+        
+        function deleteEntry() {
+            const adminPassword = prompt("Enter admin password to delete an entry:");
+            if (adminPassword === "1217") {
+                const participantNumber = parseInt(prompt("Enter the participant number to delete:"));
+                let keys = Object.keys(assignedNumbers);
+                if (participantNumber > 0 && participantNumber <= keys.length) {
+                    let userName = keys[participantNumber - 1];
+                    delete assignedNumbers[userName];
+                    localStorage.setItem("assignedNumbers", JSON.stringify(assignedNumbers));
+                    alert(`Entry for ${userName} has been deleted.`);
+                    displayResults();
+                } else {
+                    alert("Invalid participant number.");
+                }
+            } else {
+                alert("Incorrect password. Deletion denied.");
+            }
+        }
+        
+        function displayResults() {
+            const resultDiv = document.getElementById("result");
+            resultDiv.innerHTML = "<h3>Previous Submissions:</h3>";
+            let table = `<table><tr><th>Participant Number</th><th>Name</th><th>Committee Number Assigned</th></tr>`;
+            let index = 1;
+            for (const [name, number] of Object.entries(assignedNumbers)) {
+                table += `<tr><td>${index}</td><td>${name}</td><td>${number}</td></tr>`;
+                index++;
+            }
+            table += "</table>";
+            resultDiv.innerHTML += table;
+        }
+        
+        window.onload = displayResults;
+    </script>
+</head>
+<body>
+    <h2>Draw for Committee 2025-2026</h2>
+    <input type="text" id="userName" placeholder="Enter your name" />
+    <button onclick="getLuckyNumber()">Get My Number</button>
+    <button onclick="resetLuckyDraw()">Admin Reset</button>
+    <button onclick="deleteEntry()">Delete Entry</button>
+    <div id="result"></div>
+</body>
+</html>
