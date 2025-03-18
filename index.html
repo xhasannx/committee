@@ -37,71 +37,77 @@
             width: 33%;
         }
     </style>
+    
+    <!-- Firebase SDK -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
+      import { getFirestore, collection, getDocs, setDoc, doc } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
+      
+      // Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyDYnVSLNEKobfMjo9DxKexOcTPVDBwxDYg",
+        authDomain: "luckydrawproject-87de4.firebaseapp.com",
+        projectId: "luckydrawproject-87de4",
+        storageBucket: "luckydrawproject-87de4.firebasestorage.app",
+        messagingSenderId: "507608791804",
+        appId: "1:507608791804:web:1bde12e995344579a7b579"
+      };
+      
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+      
+      // Function to get lucky number
+      async function getLuckyNumber() {
+        const userName = document.getElementById("userName").value.trim();
+        if (!userName) {
+          alert("Please enter your name.");
+          return;
+        }
+
+        // Get data from Firestore
+        const luckyDrawRef = collection(db, "luckyDraw");
+        const snapshot = await getDocs(luckyDrawRef);
+        const assignedNumbers = snapshot.docs.map(doc => doc.data().number);
+        let availableNumbers = Array.from({ length: 15 }, (_, i) => i + 1).filter(n => !assignedNumbers.includes(n));
+
+        if (availableNumbers.length === 0) {
+          alert("All numbers have been assigned.");
+          return;
+        }
+
+        const luckyNumber = availableNumbers[Math.floor(Math.random() * availableNumbers.length)];
+
+        // Save to Firestore
+        await setDoc(doc(db, "luckyDraw", userName), { name: userName, number: luckyNumber });
+        
+        alert(`Your lucky number is: ${luckyNumber}`);
+        displayResults();
+      }
+
+      // Function to display all entries
+      async function displayResults() {
+        const luckyDrawRef = collection(db, "luckyDraw");
+        const snapshot = await getDocs(luckyDrawRef);
+        const resultDiv = document.getElementById("result");
+        resultDiv.innerHTML = "<h3>Previous Submissions:</h3>";
+        let table = `<table><tr><th>Participant Number</th><th>Name</th><th>Committee Number Assigned</th></tr>`;
+        snapshot.docs.forEach((doc, index) => {
+          const data = doc.data();
+          table += `<tr><td>${index + 1}</td><td>${data.name}</td><td>${data.number}</td></tr>`;
+        });
+        table += "</table>";
+        resultDiv.innerHTML += table;
+      }
+
+      // On page load, display results
+      window.onload = displayResults;
+    </script>
 </head>
 <body>
     <h2>Draw for Committee 2025-2026</h2>
     <input type="text" id="userName" placeholder="Enter your name" />
     <button onclick="getLuckyNumber()">Get My Number</button>
-    <button onclick="resetLuckyDraw()">Admin Reset</button>
-    <button onclick="deleteEntry()">Delete Entry</button>
     <div id="result"></div>
-
-    <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbymMx6av6n8X8bE7Vei2CfFnszbl1DGlQ7lMkeCphUSfbbuwNwYorzxFBmyAQoQzi8L/exec"; // Replace with your Apps Script URL
-
-        function getLuckyNumber() {
-            const userName = document.getElementById("userName").value.trim();
-            if (!userName) {
-                alert("Please enter your name.");
-                return;
-            }
-
-            fetch(API_URL)
-                .then(response => response.json())
-                .then(data => {
-                    let existingEntry = data.find(row => row[0] === userName);
-                    if (existingEntry) {
-                        alert(`You already have a number: ${existingEntry[1]}`);
-                        return;
-                    }
-
-                    let assignedNumbers = data.map(row => parseInt(row[1]));
-                    let availableNumbers = Array.from({ length: 15 }, (_, i) => i + 1).filter(n => !assignedNumbers.includes(n));
-
-                    if (availableNumbers.length === 0) {
-                        alert("All numbers have been assigned.");
-                        return;
-                    }
-
-                    let luckyNumber = availableNumbers[Math.floor(Math.random() * availableNumbers.length)];
-
-                    fetch(API_URL, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ name: userName, number: luckyNumber })
-                    }).then(() => {
-                        alert(`Your lucky number is: ${luckyNumber}`);
-                        displayResults();
-                    });
-                });
-        }
-
-        function displayResults() {
-            fetch(API_URL)
-                .then(response => response.json())
-                .then(data => {
-                    const resultDiv = document.getElementById("result");
-                    resultDiv.innerHTML = "<h3>Previous Submissions:</h3>";
-                    let table = `<table><tr><th>Participant Number</th><th>Name</th><th>Committee Number Assigned</th></tr>`;
-                    data.forEach((row, index) => {
-                        table += `<tr><td>${index + 1}</td><td>${row[0]}</td><td>${row[1]}</td></tr>`;
-                    });
-                    table += "</table>";
-                    resultDiv.innerHTML += table;
-                });
-        }
-
-        window.onload = displayResults;
-    </script>
 </body>
 </html>
