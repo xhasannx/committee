@@ -78,9 +78,9 @@
 
         const luckyNumber = availableNumbers[Math.floor(Math.random() * availableNumbers.length)];
 
-        // Save to Firestore
+        // Save to Firestore under the user's name
         await setDoc(doc(db, "luckyDraw", userName), { name: userName, number: luckyNumber });
-        
+
         alert(`Your lucky number is: ${luckyNumber}`);
         displayResults();
       }
@@ -88,7 +88,7 @@
       // Function to display all entries
       async function displayResults() {
         const luckyDrawRef = collection(db, "luckyDraw");
-        const snapshot = await getDocs(luckyDrawRef);
+        const snapshot = await getDocs(luckyDrawRef); // Fetch all documents from the 'luckyDraw' collection
         const resultDiv = document.getElementById("result");
         resultDiv.innerHTML = "<h3>Previous Submissions:</h3>";
         let table = `<table><tr><th>Participant Number</th><th>Name</th><th>Committee Number Assigned</th></tr>`;
