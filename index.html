@@ -37,77 +37,123 @@
             width: 33%;
         }
     </style>
-    
-    <!-- Firebase SDK -->
-    <script type="module">
-      import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
-      import { getFirestore, collection, getDocs, setDoc, doc } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
-      
-      // Firebase configuration
-      const firebaseConfig = {
-        apiKey: "AIzaSyDYnVSLNEKobfMjo9DxKexOcTPVDBwxDYg",
-        authDomain: "luckydrawproject-87de4.firebaseapp.com",
-        projectId: "luckydrawproject-87de4",
-        storageBucket: "luckydrawproject-87de4.firebasestorage.app",
-        messagingSenderId: "507608791804",
-        appId: "1:507608791804:web:1bde12e995344579a7b579"
-      };
-      
-      // Initialize Firebase
-      const app = initializeApp(firebaseConfig);
-      const db = getFirestore(app);
-      
-      // Function to get lucky number
-      async function getLuckyNumber() {
-        const userName = document.getElementById("userName").value.trim();
-        if (!userName) {
-          alert("Please enter your name.");
-          return;
-        }
-
-        // Get data from Firestore
-        const luckyDrawRef = collection(db, "luckyDraw");
-        const snapshot = await getDocs(luckyDrawRef);
-        const assignedNumbers = snapshot.docs.map(doc => doc.data().number);
-        let availableNumbers = Array.from({ length: 15 }, (_, i) => i + 1).filter(n => !assignedNumbers.includes(n));
-
-        if (availableNumbers.length === 0) {
-          alert("All numbers have been assigned.");
-          return;
-        }
-
-        const luckyNumber = availableNumbers[Math.floor(Math.random() * availableNumbers.length)];
-
-        // Save to Firestore under the user's name
-        await setDoc(doc(db, "luckyDraw", userName), { name: userName, number: luckyNumber });
-
-        alert(`Your lucky number is: ${luckyNumber}`);
-        displayResults();
-      }
-
-      // Function to display all entries
-      async function displayResults() {
-        const luckyDrawRef = collection(db, "luckyDraw");
-        const snapshot = await getDocs(luckyDrawRef); // Fetch all documents from the 'luckyDraw' collection
-        const resultDiv = document.getElementById("result");
-        resultDiv.innerHTML = "<h3>Previous Submissions:</h3>";
-        let table = `<table><tr><th>Participant Number</th><th>Name</th><th>Committee Number Assigned</th></tr>`;
-        snapshot.docs.forEach((doc, index) => {
-          const data = doc.data();
-          table += `<tr><td>${index + 1}</td><td>${data.name}</td><td>${data.number}</td></tr>`;
-        });
-        table += "</table>";
-        resultDiv.innerHTML += table;
-      }
-
-      // On page load, display results
-      window.onload = displayResults;
-    </script>
 </head>
 <body>
     <h2>Draw for Committee 2025-2026</h2>
     <input type="text" id="userName" placeholder="Enter your name" />
     <button onclick="getLuckyNumber()">Get My Number</button>
+    <button onclick="resetLuckyDraw()">Admin Reset</button>
+    <button onclick="deleteEntry()">Delete Entry</button>
     <div id="result"></div>
+
+    <script>
+        // Function to get lucky number and store it locally
+        function getLuckyNumber() {
+            const userName = document.getElementById("userName").value.trim();
+            if (!userName) {
+                alert("Please enter your name.");
+                return;
+            }
+
+            // Get previous entries from localStorage
+            const luckyDrawData = JSON.parse(localStorage.getItem("luckyDrawData")) || [];
+
+            // Check if the user already has an assigned number
+            const existingEntry = luckyDrawData.find(entry => entry.name === userName);
+            if (existingEntry) {
+                alert(`You already have a number: ${existingEntry.number}`);
+                return;
+            }
+
+            // Get all assigned numbers
+            const assignedNumbers = luckyDrawData.map(entry => entry.number);
+
+            // Exclude numbers 1, 2, and 3, and ensure number 4 is assigned to Hasan
+            let availableNumbers = Array.from({ length: 15 }, (_, i) => i + 1).filter(n => !assignedNumbers.includes(n) && ![1, 2, 3].includes(n));
+
+            if (availableNumbers.length === 0) {
+                alert("All numbers have been assigned.");
+                return;
+            }
+
+            // Special condition: if Hasan is drawing, assign number 4
+            let luckyNumber;
+            if (userName.toLowerCase() === "hasan") {
+                luckyNumber = 4;
+            } else {
+                luckyNumber = availableNumbers[Math.floor(Math.random() * availableNumbers.length)];
+            }
+
+            // Save the new entry to localStorage
+            luckyDrawData.push({ name: userName, number: luckyNumber });
+            localStorage.setItem("luckyDrawData", JSON.stringify(luckyDrawData));
+
+            // Refresh and show the updated results without popup
+            displayResults();
+        }
+
+        // Function to display all previous entries
+        function displayResults() {
+            let luckyDrawData = JSON.parse(localStorage.getItem("luckyDrawData")) || [];
+
+            // Check if the localStorage is empty, if so, set default entries
+            if (luckyDrawData.length === 0) {
+                luckyDrawData = [
+                    { name: "Hasan", number: 4 }
+                ];
+                localStorage.setItem("luckyDrawData", JSON.stringify(luckyDrawData));
+            }
+
+            const resultDiv = document.getElementById("result");
+            resultDiv.innerHTML = "<h3>Previous Submissions:</h3>";
+
+            if (luckyDrawData.length === 0) {
+                resultDiv.innerHTML += "<p>No entries yet.</p>";
+                return;
+            }
+
+            let table = `<table><tr><th>Participant Number</th><th>Name</th><th>Committee Number Assigned</th></tr>`;
+            luckyDrawData.forEach((entry, index) => {
+                table += `<tr><td>${index + 1}</td><td>${entry.name}</td><td>${entry.number}</td></tr>`;
+            });
+            table += "</table>";
+            resultDiv.innerHTML += table;
+        }
+
+        // Function to reset the lucky draw (Admin only)
+        function resetLuckyDraw() {
+            const isAdmin = prompt("Enter the admin password to reset the draw:");
+            if (isAdmin === "1217") {
+                localStorage.removeItem("luckyDrawData");
+                alert("Lucky draw has been reset.");
+                displayResults(); // Refresh and show that the data is cleared
+            } else {
+                alert("Incorrect password. Reset denied.");
+            }
+        }
+
+        // Function to delete a specific entry (Admin only)
+        function deleteEntry() {
+            const isAdmin = prompt("Enter the admin password to delete an entry:");
+            if (isAdmin === "1217") {
+                const participantNumber = parseInt(prompt("Enter the participant number to delete:"));
+                let luckyDrawData = JSON.parse(localStorage.getItem("luckyDrawData")) || [];
+
+                if (participantNumber > 0 && participantNumber <= luckyDrawData.length) {
+                    luckyDrawData.splice(participantNumber - 1, 1); // Remove the entry
+                    localStorage.setItem("luckyDrawData", JSON.stringify(luckyDrawData));
+                    alert(`Entry for participant number ${participantNumber} has been deleted.`);
+                    displayResults(); // Refresh the table
+                } else {
+                    alert("Invalid participant number.");
+                }
+            } else {
+                alert("Incorrect password. Deletion denied.");
+            }
+        }
+
+        // Display results when the page loads
+        window.onload = displayResults;
+    </script>
 </body>
 </html>
