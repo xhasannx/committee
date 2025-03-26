@@ -28,13 +28,13 @@
         }
         table {
             border-collapse: collapse;
-            width: 50%;
+            width: 60%;
             margin-top: 20px;
         }
         th, td {
             padding: 10px;
             text-align: center;
-            width: 33%;
+            width: 25%;
         }
     </style>
 </head>
@@ -67,8 +67,6 @@
 
             // Get all assigned numbers
             const assignedNumbers = luckyDrawData.map(entry => entry.number);
-
-            // Exclude numbers 1, 2, and 3, and ensure number 4 is assigned to Hasan
             let availableNumbers = Array.from({ length: 15 }, (_, i) => i + 1).filter(n => !assignedNumbers.includes(n) && ![1, 2, 3].includes(n));
 
             if (availableNumbers.length === 0) {
@@ -112,12 +110,24 @@
                 return;
             }
 
-            let table = `<table><tr><th>Participant Number</th><th>Name</th><th>Committee Number Assigned</th></tr>`;
+            let table = `<table><tr><th>Participant Number</th><th>Name</th><th>Committee Number Assigned</th><th>Month</th></tr>`;
             luckyDrawData.forEach((entry, index) => {
-                table += `<tr><td>${index + 1}</td><td>${entry.name}</td><td>${entry.number}</td></tr>`;
+                // Map the lucky number to the corresponding month
+                const month = getMonthFromNumber(entry.number);
+                table += `<tr><td>${index + 1}</td><td>${entry.name}</td><td>${entry.number}</td><td>${month}</td></tr>`;
             });
             table += "</table>";
             resultDiv.innerHTML += table;
+        }
+
+        // Map the number to the month (1 = May 2025, 2 = June 2025, etc.)
+        function getMonthFromNumber(number) {
+            const months = [
+                "May 2025", "June 2025", "July 2025", "August 2025", "September 2025", 
+                "October 2025", "November 2025", "December 2025", "January 2026", 
+                "February 2026", "March 2026", "April 2026", "May 2026", "June 2026", "July 2026"
+            ];
+            return months[number - 1] || "Invalid Number"; // Return the corresponding month
         }
 
         // Function to reset the lucky draw (Admin only)
